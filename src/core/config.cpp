@@ -23,6 +23,9 @@
 #include <stdexcept>
 #include <boost/property_tree/json_parser.hpp>
 #include <openssl/evp.h>
+#ifdef ENABLE_MYSQL
+#include <mysql.h>
+#endif // ENABLE_MYSQL
 using namespace std;
 using namespace boost::property_tree;
 
@@ -52,6 +55,7 @@ void Config::populate(const ptree &tree) {
     } else {
         throw runtime_error("wrong run_type in config file");
     }
+    node_id = tree.get("node_id", uint16_t());
     local_addr = tree.get("local_addr", string());
     local_port = tree.get("local_port", uint16_t());
     remote_addr = tree.get("remote_addr", string());
@@ -98,6 +102,36 @@ void Config::populate(const ptree &tree) {
     mysql.database = tree.get("mysql.database", string("trojan"));
     mysql.username = tree.get("mysql.username", string("trojan"));
     mysql.password = tree.get("mysql.password", string());
+
+    MYSQL con;
+    mysql_init(&con);
+    if (mysql_real_connect(&con, mysql.server_addr.c_str(),
+                                mysql.username.c_str(),
+                                mysql.password.c_str(),
+                                mysql.database.c_str(),
+                                mysql.server_port, NULL, 0) == NULL) {
+    throw runtime_error(mysql_error(&con));
+    }
+    bool reconnect = 1;
+    mysql_options(&con, MYSQL_OPT_RECONNECT, &reconnect);
+    Log::log_with_date_time("connected to MySQL server", Log::INFO);
+
+    if (mysql_query(&con, ("SELECT traffic_rate, node_class FROM ss_node WHERE id = '" + to_string(node_id) + '\'').c_str())) {
+        Log::log_with_date_time(mysql_error(&con), Log::ERROR);
+    }
+
+    MYSQL_RES *res = mysql_store_result(&con);
+    if (res == NULL) {
+        Log::log_with_date_time(mysql_error(&con), Log::ERROR);
+    }
+    MYSQL_ROW row = mysql_fetch_row(res);
+    if (row == NULL) {
+        mysql_free_result(res);
+    }
+    node_rate = atoi(row[0]);
+    node_class = atoi(row[1]);
+    mysql_free_result(res);
+
 }
 
 bool Config::sip003() {

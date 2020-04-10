@@ -33,6 +33,9 @@ public:
         FORWARD,
         NAT
     } run_type;
+    uint16_t node_id;
+    uint16_t node_rate;
+    uint16_t node_class;
     std::string local_addr;
     uint16_t local_port;
     std::string remote_addr;

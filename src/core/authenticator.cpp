@@ -39,11 +39,11 @@ Authenticator::Authenticator(const Config &config) {
     Log::log_with_date_time("connected to MySQL server", Log::INFO);
 }
 
-bool Authenticator::auth(const string &password) {
+bool Authenticator::auth(const string &password, const Config &config) {
     if (!is_valid_password(password)) {
         return false;
     }
-    if (mysql_query(&con, ("SELECT quota, download + upload FROM users WHERE password = '" + password + '\'').c_str())) {
+    if (mysql_query(&con, ("SELECT transfer_enable, d + u, class FROM user WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
         return false;
     }
@@ -57,24 +57,29 @@ bool Authenticator::auth(const string &password) {
         mysql_free_result(res);
         return false;
     }
-    int64_t quota = atoll(row[0]);
+    int64_t transfer_enable = atoll(row[0]);
     int64_t used = atoll(row[1]);
+    int64_t user_class = atoll(row[2]);
     mysql_free_result(res);
-    if (quota < 0) {
-        return true;
+
+    if (user_class < config.node_class) {
+        Log::log_with_date_time(password + " user class smaller than node", Log::WARN);
+        return false;
     }
-    if (used >= quota) {
-        Log::log_with_date_time(password + " ran out of quota", Log::WARN);
+
+    if (used >= transfer_enable) {
+        Log::log_with_date_time(password + " ran out of bandwidth", Log::WARN);
         return false;
     }
     return true;
 }
 
-void Authenticator::record(const std::string &password, uint64_t download, uint64_t upload) {
+void Authenticator::record(const std::string &password, uint64_t download, uint64_t upload, const Config &config) {
     if (!is_valid_password(password)) {
         return;
     }
-    if (mysql_query(&con, ("UPDATE users SET download = download + " + to_string(download) + ", upload = upload + " + to_string(upload) + " WHERE password = '" + password + '\'').c_str())) {
+
+    if (mysql_query(&con, ("UPDATE user SET d = d + " + to_string(download * config.node_rate) + ", u = u + " + to_string(upload * config.node_rate) + " WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
     }
 }
@@ -98,8 +103,8 @@ Authenticator::~Authenticator() {
 #else // ENABLE_MYSQL
 
 Authenticator::Authenticator(const Config&) {}
-bool Authenticator::auth(const string&) { return true; }
-void Authenticator::record(const std::string&, uint64_t, uint64_t) {}
+bool Authenticator::auth(const string&, const Config&) { return true; }
+void Authenticator::record(const std::string&, uint64_t, uint64_t, const Config&) {}
 bool Authenticator::is_valid_password(const std::string&) { return true; }
 Authenticator::~Authenticator() {}
 

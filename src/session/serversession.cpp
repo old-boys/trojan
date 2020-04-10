@@ -140,7 +140,7 @@ void ServerSession::in_recv(const string &data) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
                 valid = false;
-                if (auth && auth->auth(req.password)) {
+                if (auth && auth->auth(req.password, config)) {
                     valid = true;
                     auth_password = req.password;
                     Log::log_with_endpoint(in_endpoint, "authenticated by authenticator (" + req.password.substr(0, 7) + ')', Log::INFO);
@@ -321,7 +321,7 @@ void ServerSession::destroy() {
     status = DESTROY;
     Log::log_with_endpoint(in_endpoint, "disconnected, " + to_string(recv_len) + " bytes received, " + to_string(sent_len) + " bytes sent, lasted for " + to_string(time(NULL) - start_time) + " seconds", Log::INFO);
     if (auth && !auth_password.empty()) {
-        auth->record(auth_password, recv_len, sent_len);
+        auth->record(auth_password, recv_len, sent_len, config);
     }
     boost::system::error_code ec;
     resolver.cancel();
