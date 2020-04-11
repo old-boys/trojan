@@ -114,6 +114,7 @@ void Config::populate(const ptree &tree) {
     mysql.password = tree.get("mysql.password", string());
 	mysql.cafile = tree.get("mysql.cafile", string());
 
+#ifdef ENABLE_MYSQL
     MYSQL con;
     mysql_init(&con);
     if (mysql_real_connect(&con, mysql.server_addr.c_str(),
@@ -142,6 +143,7 @@ void Config::populate(const ptree &tree) {
     node_rate = atoi(row[0]);
     node_class = atoi(row[1]);
     mysql_free_result(res);
+#endif
 
 }
 
