@@ -35,7 +35,7 @@ void Config::load(const string &filename) {
     populate(tree);
 }
 
-void Config::populate(const std::string &JSON) {
+void Config::populate(const string &JSON) {
     istringstream s(JSON);
     ptree tree;
     read_json(s, tree);
@@ -63,9 +63,11 @@ void Config::populate(const ptree &tree) {
     target_addr = tree.get("target_addr", string());
     target_port = tree.get("target_port", uint16_t());
     map<string, string>().swap(password);
-    for (auto& item: tree.get_child("password")) {
-        string p = item.second.get_value<string>();
-        password[SHA224(p)] = p;
+    if (tree.get_child_optional("password")) {
+        for (auto& item: tree.get_child("password")) {
+            string p = item.second.get_value<string>();
+            password[SHA224(p)] = p;
+        }
     }
     udp_timeout = tree.get("udp_timeout", 60);
     log_level = static_cast<Log::Level>(tree.get("log_level", 1));
@@ -79,10 +81,18 @@ void Config::populate(const ptree &tree) {
     ssl.prefer_server_cipher = tree.get("ssl.prefer_server_cipher", true);
     ssl.sni = tree.get("ssl.sni", string());
     ssl.alpn = "";
-    for (auto& item: tree.get_child("ssl.alpn")) {
-        string proto = item.second.get_value<string>();
-        ssl.alpn += (char)((unsigned char)(proto.length()));
-        ssl.alpn += proto;
+    if (tree.get_child_optional("ssl.alpn")) {
+        for (auto& item: tree.get_child("ssl.alpn")) {
+            string proto = item.second.get_value<string>();
+            ssl.alpn += (char)((unsigned char)(proto.length()));
+            ssl.alpn += proto;
+        }
+    }
+    map<string, uint16_t>().swap(ssl.alpn_port_override);
+    if (tree.get_child_optional("ssl.alpn_port_override")) {
+        for (auto& item: tree.get_child("ssl.alpn_port_override")) {
+            ssl.alpn_port_override[item.first] = item.second.get_value<uint16_t>();
+        }
     }
     ssl.reuse_session = tree.get("ssl.reuse_session", true);
     ssl.session_ticket = tree.get("ssl.session_ticket", false);
@@ -102,6 +112,7 @@ void Config::populate(const ptree &tree) {
     mysql.database = tree.get("mysql.database", string("trojan"));
     mysql.username = tree.get("mysql.username", string("trojan"));
     mysql.password = tree.get("mysql.password", string());
+	mysql.cafile = tree.get("mysql.cafile", string());
 
     MYSQL con;
     mysql_init(&con);
