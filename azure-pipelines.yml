@@ -31,27 +31,6 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/trojan
       artifact: macOSBinary
 
-- stage: Test
-  jobs:
-
-  - job: Linux
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-    - download: current
-      artifact: LinuxBinary
-    - script: |
-        set -uo pipefail
-        BINARY="$PIPELINE_WORKSPACE/LinuxBinary/trojan"
-        chmod +x "$BINARY"
-        mkdir results
-        cp -r "$(tests/LinuxSmokeTest/basic.sh "$BINARY")" results/basic
-        cp -r "$(tests/LinuxSmokeTest/fake-client.sh "$BINARY")" results/fake-client
-      env:
-        PIPELINE_WORKSPACE: $(Pipeline.Workspace)
-    - publish: $(System.DefaultWorkingDirectory)/results
-      artifact: LinuxTest
-
 - stage: Package
   jobs:
 
