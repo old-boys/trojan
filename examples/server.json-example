@@ -5,7 +5,6 @@
     "remote_addr": "127.0.0.1",
     "remote_port": 80,
     "password": [
-        "password1",
         "password2"
     ],
     "log_level": 1,
@@ -38,12 +37,13 @@
         "fast_open_qlen": 20
     },
     "mysql": {
-        "enabled": false,
+        "enabled": true,
         "server_addr": "127.0.0.1",
         "server_port": 3306,
         "database": "trojan",
         "username": "trojan",
         "password": "",
         "cafile": ""
-    }
+    },
+    "node_id": 1
 }
