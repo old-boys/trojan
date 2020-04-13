@@ -75,6 +75,9 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, const Config
         Log::log_with_date_time(password + " ran out of bandwidth", Log::WARN);
         return false;
     }
+
+    //TODO: add disconnect ip here
+
     return true;
 }
 
