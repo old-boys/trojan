@@ -23,9 +23,6 @@
 #include <stdexcept>
 #include <boost/property_tree/json_parser.hpp>
 #include <openssl/evp.h>
-#ifdef ENABLE_MYSQL
-#include <mysql.h>
-#endif // ENABLE_MYSQL
 using namespace std;
 using namespace boost::property_tree;
 
@@ -115,7 +112,6 @@ void Config::populate(const ptree &tree) {
 	mysql.cafile = tree.get("mysql.cafile", string());
 
 #ifdef ENABLE_MYSQL
-    MYSQL con;
     mysql_init(&con);
     if (mysql_real_connect(&con, mysql.server_addr.c_str(),
                                 mysql.username.c_str(),

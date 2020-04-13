@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <map>
 #include <boost/property_tree/ptree.hpp>
+#include <mysql.h>
 #include "log.h"
 
 class Config {
@@ -33,6 +34,7 @@ public:
         FORWARD,
         NAT
     } run_type;
+    MYSQL con;
     uint16_t node_id;
     uint16_t node_rate;
     uint16_t node_class;

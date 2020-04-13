@@ -25,8 +25,8 @@ using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
 
-ClientSession::ClientSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context) :
-    Session(config, io_context),
+ClientSession::ClientSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, context &ssl_context) :
+    Session(config, sstatus, io_context),
     status(HANDSHAKE),
     first_packet_recv(false),
     in_socket(io_context),

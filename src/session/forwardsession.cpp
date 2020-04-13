@@ -24,8 +24,8 @@ using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
 
-ForwardSession::ForwardSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context) :
-    Session(config, io_context),
+ForwardSession::ForwardSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, context &ssl_context) :
+    Session(config, sstatus, io_context),
     status(CONNECT),
     first_packet_recv(false),
     in_socket(io_context),

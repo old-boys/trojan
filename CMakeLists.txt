@@ -15,6 +15,7 @@ endif()
 add_executable(trojan
     src/core/authenticator.cpp
     src/core/config.cpp
+    src/core/sstatus.cpp
     src/core/log.cpp
     src/core/service.cpp
     src/core/version.cpp

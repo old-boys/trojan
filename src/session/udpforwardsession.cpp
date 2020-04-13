@@ -26,8 +26,8 @@ using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
 
-UDPForwardSession::UDPForwardSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context, const udp::endpoint &endpoint, const UDPWrite &in_write) :
-    Session(config, io_context),
+UDPForwardSession::UDPForwardSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, context &ssl_context, const udp::endpoint &endpoint, const UDPWrite &in_write) :
+    Session(config, sstatus, io_context),
     status(CONNECT),
     in_write(in_write),
     out_socket(io_context, ssl_context),

@@ -17,11 +17,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "version.h"
-using namespace std;
+#ifndef _SSTATUS_H_
+#define _SSTATUS_H_
 
-const string Version::version("1.19.0");
+#include <cstdint>
+#include <string>
+#include <map>
+#include <set>
+#include "log.h"
 
-string Version::get_version() {
-    return version;
-}
+class SStatus {
+public:
+    std::set<uint64_t> online_user;
+    uint64_t bandwidth;
+    std::map<std::string, uint64_t> ipset;
+            
+    void init();
+};
+
+#endif // _SSTATUS_H_

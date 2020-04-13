@@ -35,8 +35,8 @@ using namespace boost::asio::ssl;
 #define IP6T_SO_ORIGINAL_DST 80
 #endif // IP6T_SO_ORIGINAL_DST
 
-NATSession::NATSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context) :
-    Session(config, io_context),
+NATSession::NATSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, context &ssl_context) :
+    Session(config, sstatus, io_context),
     status(CONNECT),
     first_packet_recv(false),
     in_socket(io_context),

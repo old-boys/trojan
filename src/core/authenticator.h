@@ -24,6 +24,7 @@
 #include <mysql.h>
 #endif // ENABLE_MYSQL
 #include "config.h"
+#include "sstatus.h"
 
 class Authenticator {
 private:
@@ -36,8 +37,8 @@ private:
     bool is_valid_password(const std::string &password);
 public:
     Authenticator(const Config &config);
-    bool auth(const std::string &password, const Config &config);
-    void record(const std::string &password, uint64_t download, uint64_t upload, const Config &config);
+    bool auth(const std::string &password, uint64_t &user_id, const Config &config);
+    void record(const std::string &password,  SStatus &sstatus, uint64_t download, uint64_t upload, const Config &config);
     ~Authenticator();
 };
 

@@ -24,8 +24,8 @@ using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
 
-ServerSession::ServerSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context, Authenticator *auth, const string &plain_http_response) :
-    Session(config, io_context),
+ServerSession::ServerSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, context &ssl_context, Authenticator *auth, const string &plain_http_response) :
+    Session(config, sstatus, io_context),
     status(HANDSHAKE),
     in_socket(io_context, ssl_context),
     out_socket(io_context),
@@ -36,6 +36,7 @@ ServerSession::ServerSession(const Config &config, boost::asio::io_context &io_c
 tcp::socket& ServerSession::accept_socket() {
     return (tcp::socket&)in_socket.next_layer();
 }
+
 
 void ServerSession::start() {
     boost::system::error_code ec;
@@ -140,10 +141,10 @@ void ServerSession::in_recv(const string &data) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
                 valid = false;
-                if (auth && auth->auth(req.password, config)) {
+                if (auth && auth->auth(req.password, user_id, config)) {
                     valid = true;
                     auth_password = req.password;
-                    Log::log_with_endpoint(in_endpoint, "authenticated by authenticator (" + req.password.substr(0, 7) + ')', Log::INFO);
+                    Log::log_with_endpoint(in_endpoint, "user " + to_string(user_id) + " authenticated by authenticator (" + req.password.substr(0, 7) + ')', Log::INFO);
                 }
             } else {
                 Log::log_with_endpoint(in_endpoint, "authenticated as " + password_iterator->second, Log::INFO);
@@ -333,7 +334,9 @@ void ServerSession::destroy() {
     status = DESTROY;
     Log::log_with_endpoint(in_endpoint, "disconnected, " + to_string(recv_len) + " bytes received, " + to_string(sent_len) + " bytes sent, lasted for " + to_string(time(NULL) - start_time) + " seconds", Log::INFO);
     if (auth && !auth_password.empty()) {
-        auth->record(auth_password, recv_len, sent_len, config);
+        sstatus.online_user.insert(user_id);
+        sstatus.ipset.insert({in_endpoint.address().to_string(), user_id});
+        auth->record(auth_password, sstatus, recv_len, sent_len, config);
     }
     boost::system::error_code ec;
     resolver.cancel();

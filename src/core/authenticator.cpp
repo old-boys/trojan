@@ -42,11 +42,11 @@ Authenticator::Authenticator(const Config &config) {
     Log::log_with_date_time("connected to MySQL server", Log::INFO);
 }
 
-bool Authenticator::auth(const string &password, const Config &config) {
+bool Authenticator::auth(const string &password, uint64_t &user_id, const Config &config) {
     if (!is_valid_password(password)) {
         return false;
     }
-    if (mysql_query(&con, ("SELECT transfer_enable, d + u, class FROM user WHERE password = '" + password + '\'').c_str())) {
+    if (mysql_query(&con, ("SELECT transfer_enable, d + u, class, id FROM user WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
         return false;
     }
@@ -63,6 +63,7 @@ bool Authenticator::auth(const string &password, const Config &config) {
     int64_t transfer_enable = atoll(row[0]);
     int64_t used = atoll(row[1]);
     int64_t user_class = atoll(row[2]);
+    user_id =  atoll(row[3]);
     mysql_free_result(res);
 
     if (user_class < config.node_class) {
@@ -77,10 +78,12 @@ bool Authenticator::auth(const string &password, const Config &config) {
     return true;
 }
 
-void Authenticator::record(const string &password, uint64_t download, uint64_t upload, const Config &config) {
+void Authenticator::record(const string &password, SStatus &sstatus, uint64_t download, uint64_t upload, const Config &config) {
     if (!is_valid_password(password)) {
         return;
-    }
+    } 
+
+    sstatus.bandwidth += download * config.node_rate + upload * config.node_rate;
 
     if (mysql_query(&con, ("UPDATE user SET d = d + " + to_string(download * config.node_rate) + ", u = u + " + to_string(upload * config.node_rate) + " WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
@@ -106,8 +109,8 @@ Authenticator::~Authenticator() {
 #else // ENABLE_MYSQL
 
 Authenticator::Authenticator(const Config&) {}
-bool Authenticator::auth(const string&, const Config&) { return true; }
-void Authenticator::record(const string&, uint64_t, uint64_t, const Config&) {}
+bool Authenticator::auth(const string&, uint64_t &, const Config&) { return true; }
+void Authenticator::record(const string&, SStatus&, uint64_t, uint64_t, const Config&) {}
 bool Authenticator::is_valid_password(const string&) { return true; }
 Authenticator::~Authenticator() {}
 

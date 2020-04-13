@@ -17,11 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "version.h"
-using namespace std;
+#include "sstatus.h"
+#include <cstdlib>
+#include <sstream>
+#include <stdexcept>
 
-const string Version::version("1.19.0");
-
-string Version::get_version() {
-    return version;
+void SStatus::init() {
+    ipset.clear();
+    online_user.clear();
+    bandwidth = 0;
 }

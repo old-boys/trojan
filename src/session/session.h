@@ -26,6 +26,7 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include "core/config.h"
+#include "core/sstatus.h"
 
 class Session : public std::enable_shared_from_this<Session> {
 protected:
@@ -34,6 +35,7 @@ protected:
         SSL_SHUTDOWN_TIMEOUT = 30
     };
     const Config &config;
+    SStatus &sstatus;
     uint8_t in_read_buf[MAX_LENGTH];
     uint8_t out_read_buf[MAX_LENGTH];
     uint8_t udp_read_buf[MAX_LENGTH];
@@ -48,7 +50,7 @@ protected:
     boost::asio::ip::udp::endpoint udp_recv_endpoint;
     boost::asio::steady_timer ssl_shutdown_timer;
 public:
-    Session(const Config &config, boost::asio::io_context &io_context);
+    Session(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context);
     virtual boost::asio::ip::tcp::socket& accept_socket() = 0;
     virtual void start() = 0;
     virtual ~Session();

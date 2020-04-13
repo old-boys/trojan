@@ -44,8 +44,9 @@ using namespace boost::asio::ssl;
 typedef boost::asio::detail::socket_option::boolean<SOL_SOCKET, SO_REUSEPORT> reuse_port;
 #endif // ENABLE_REUSE_PORT
 
-Service::Service(Config &config, bool test) :
+Service::Service(Config &config, SStatus &sstatus, bool test) :
     config(config),
+    sstatus(sstatus),
     socket_acceptor(io_context),
     ssl_context(context::sslv23),
     auth(nullptr),
@@ -305,13 +306,13 @@ void Service::stop() {
 void Service::async_accept() {
     shared_ptr<Session>session(nullptr);
     if (config.run_type == Config::SERVER) {
-        session = make_shared<ServerSession>(config, io_context, ssl_context, auth, plain_http_response);
+        session = make_shared<ServerSession>(config, sstatus, io_context, ssl_context, auth, plain_http_response);
     } else if (config.run_type == Config::FORWARD) {
-        session = make_shared<ForwardSession>(config, io_context, ssl_context);
+        session = make_shared<ForwardSession>(config, sstatus, io_context, ssl_context);
     } else if (config.run_type == Config::NAT) {
-        session = make_shared<NATSession>(config, io_context, ssl_context);
+        session = make_shared<NATSession>(config, sstatus, io_context, ssl_context);
     } else {
-        session = make_shared<ClientSession>(config, io_context, ssl_context);
+        session = make_shared<ClientSession>(config, sstatus, io_context, ssl_context);
     }
     socket_acceptor.async_accept(session->accept_socket(), [this, session](const boost::system::error_code error) {
         if (error == boost::asio::error::operation_aborted) {
@@ -353,7 +354,7 @@ void Service::udp_async_read() {
             it = next;
         }
         Log::log_with_endpoint(tcp::endpoint(udp_recv_endpoint.address(), udp_recv_endpoint.port()), "new UDP session");
-        auto session = make_shared<UDPForwardSession>(config, io_context, ssl_context, udp_recv_endpoint, [this](const udp::endpoint &endpoint, const string &data) {
+        auto session = make_shared<UDPForwardSession>(config, sstatus, io_context, ssl_context, udp_recv_endpoint, [this](const udp::endpoint &endpoint, const string &data) {
             boost::system::error_code ec;
             udp_socket.send_to(boost::asio::buffer(data), endpoint, 0, ec);
             if (ec == boost::asio::error::no_permission) {

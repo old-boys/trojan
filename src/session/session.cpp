@@ -19,7 +19,8 @@
 
 #include "session.h"
 
-Session::Session(const Config &config, boost::asio::io_context &io_context) : config(config),
+Session::Session(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context) : config(config),
+                                                                              sstatus(sstatus),
                                                                               recv_len(0),
                                                                               sent_len(0),
                                                                               resolver(io_context),

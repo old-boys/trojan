@@ -44,7 +44,7 @@ private:
     void out_sent();
     std::pair<std::string, uint16_t> get_target_endpoint();
 public:
-    NATSession(const Config &config, boost::asio::io_context &io_context, boost::asio::ssl::context &ssl_context);
+    NATSession(const Config &config, SStatus &sstatus, boost::asio::io_context &io_context, boost::asio::ssl::context &ssl_context);
     boost::asio::ip::tcp::socket& accept_socket();
     void start();
 };

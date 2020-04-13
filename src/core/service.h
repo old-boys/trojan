@@ -33,6 +33,7 @@ private:
         MAX_LENGTH = 8192
     };
     const Config &config;
+    SStatus &sstatus;
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::acceptor socket_acceptor;
     boost::asio::ssl::context ssl_context;
@@ -45,7 +46,7 @@ private:
     void async_accept();
     void udp_async_read();
 public:
-    Service(Config &config, bool test = false);
+    Service(Config &config, SStatus &sstatus, bool test = false);
     void run();
     void stop();
     boost::asio::io_context &service();
