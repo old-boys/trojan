@@ -45,5 +45,6 @@
         "password": "",
         "cafile": ""
     },
-    "node_id": 1
+    "node_id": 1,
+    "ins_type": 2
 }

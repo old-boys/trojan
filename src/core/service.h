@@ -24,6 +24,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include "authenticator.h"
 #include "session/udpforwardsession.h"
 
@@ -37,6 +38,7 @@ private:
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::acceptor socket_acceptor;
     boost::asio::ssl::context ssl_context;
+    boost::asio::steady_timer mtimer;
     Authenticator *auth;
     std::string plain_http_response;
     boost::asio::ip::udp::socket udp_socket;
@@ -45,6 +47,7 @@ private:
     boost::asio::ip::udp::endpoint udp_recv_endpoint;
     void async_accept();
     void udp_async_read();
+    void update_server_status(const boost::system::error_code&);
 public:
     Service(Config &config, SStatus &sstatus, bool test = false);
     void run();

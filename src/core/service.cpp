@@ -22,6 +22,11 @@
 #include <cerrno>
 #include <stdexcept>
 #include <fstream>
+
+#include <mysql.h>
+
+#include <boost/asio/placeholders.hpp>
+
 #ifdef _WIN32
 #include <wincrypt.h>
 #include <tchar.h>
@@ -49,6 +54,7 @@ Service::Service(Config &config, SStatus &sstatus, bool test) :
     sstatus(sstatus),
     socket_acceptor(io_context),
     ssl_context(context::sslv23),
+    mtimer(io_context, boost::asio::chrono::seconds(0)),
     auth(nullptr),
     udp_socket(io_context) {
 #ifndef ENABLE_NAT
@@ -272,6 +278,52 @@ Service::Service(Config &config, SStatus &sstatus, bool test) :
     }
 }
 
+
+void Service::update_server_status(const boost::system::error_code&) {
+
+   if (mysql_query(&auth->con, ("UPDATE ss_node SET node_heartbeat=" + to_string(std::chrono::duration_cast<std::chrono::seconds>(
+   std::chrono::system_clock::now().time_since_epoch()).count()) +  " WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
+       Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
+    }
+
+
+    map<string, uint64_t>::iterator iter = sstatus.ipset.begin();
+    while (iter != sstatus.ipset.end())
+    {
+
+	if (mysql_query(&auth->con, ("INSERT INTO alive_ip (id, nodeid, userid, ip, datetime, type) VALUES (NULL,'" + to_string(config.node_id) +
+	"','" + to_string(iter->second) +  "','" + iter->first +  "','" + to_string(std::chrono::duration_cast<std::chrono::seconds>(
+	std::chrono::system_clock::now().time_since_epoch()).count()) +  "','" + to_string(config.ins_type) + "')").c_str())) {
+	    Log::log_with_date_time(mysql_error(&auth->con), Log::FATAL);
+	}
+
+	iter++;
+    }
+    sstatus.ipset.clear();
+
+    if (sstatus.online_user.size() > 0) {
+        if (mysql_query(&auth->con, ("INSERT INTO ss_node_online_log (id, node_id, online_user, log_time, type) VALUES (NULL,'" + to_string(config.node_id) +
+        "','" + to_string(sstatus.online_user.size()) +  "','"  + to_string(std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count()) +  "','" + to_string(config.ins_type) + "')").c_str())) {
+
+            Log::log_with_date_time(mysql_error(&auth->con), Log::FATAL);
+        }
+    }
+    sstatus.online_user.clear();
+
+    if (sstatus.bandwidth > 0) {
+        if (mysql_query(&auth->con, ("UPDATE ss_node SET `node_bandwidth`=`node_bandwidth`+'" + to_string(sstatus.bandwidth) +  "' WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
+            Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
+        }
+    }
+    Log::log_with_date_time("流量消耗: " + to_string(sstatus.bandwidth), Log::ERROR);
+    sstatus.bandwidth = 0;
+	
+    mtimer.expires_from_now(boost::asio::chrono::seconds(70));
+    mtimer.async_wait(boost::bind(&Service::update_server_status,  boost::ref(*this), _1));
+
+}
+
 void Service::run() {
     async_accept();
     if (config.run_type == Config::FORWARD) {
@@ -281,6 +333,7 @@ void Service::run() {
     string rt;
     if (config.run_type == Config::SERVER) {
         rt = "server";
+        mtimer.async_wait(boost::bind(&Service::update_server_status, this, boost::asio::placeholders::error));
     } else if (config.run_type == Config::FORWARD) {
         rt = "forward";
     } else if (config.run_type == Config::NAT) {
@@ -300,6 +353,7 @@ void Service::stop() {
         udp_socket.cancel(ec);
         udp_socket.close(ec);
     }
+    mtimer.cancel();
     io_context.stop();
 }
 

@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <boost/property_tree/json_parser.hpp>
 #include <openssl/evp.h>
+#include <mysql.h>
 using namespace std;
 using namespace boost::property_tree;
 
@@ -53,6 +54,7 @@ void Config::populate(const ptree &tree) {
         throw runtime_error("wrong run_type in config file");
     }
     node_id = tree.get("node_id", uint16_t());
+    ins_type = tree.get("ins_type", uint16_t());
     local_addr = tree.get("local_addr", string());
     local_port = tree.get("local_port", uint16_t());
     remote_addr = tree.get("remote_addr", string());
@@ -112,6 +114,7 @@ void Config::populate(const ptree &tree) {
 	mysql.cafile = tree.get("mysql.cafile", string());
 
 #ifdef ENABLE_MYSQL
+    MYSQL con;
     mysql_init(&con);
     if (mysql_real_connect(&con, mysql.server_addr.c_str(),
                                 mysql.username.c_str(),
@@ -139,6 +142,7 @@ void Config::populate(const ptree &tree) {
     node_rate = atoi(row[0]);
     node_class = atoi(row[1]);
     mysql_free_result(res);
+    mysql_close(&con);
 #endif
 
 }

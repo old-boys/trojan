@@ -26,7 +26,6 @@
 #include <mysql.h>
 #include "core/service.h"
 #include "core/version.h"
-#include "core/timer.h"
 using namespace std;
 using namespace boost::asio;
 namespace po = boost::program_options;
@@ -139,7 +138,6 @@ int main(int argc, const char *argv[]) {
         bool restart;
         Config config;
         SStatus sstatus;
-        Timer t1;
         do {
             restart = false;
             if (config.sip003()) {
@@ -150,49 +148,6 @@ int main(int argc, const char *argv[]) {
            
            
             sstatus.init();
-
-            if (!t1.isRunning()) {
-               t1.setFunc([&](){
-                   if (mysql_query(&config.con, ("UPDATE ss_node SET node_heartbeat=" + to_string(std::chrono::duration_cast<std::chrono::seconds>(
-                   std::chrono::system_clock::now().time_since_epoch()).count()) +  " WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
-                       Log::log_with_date_time(mysql_error(&config.con), Log::ERROR);
-                    }
-
-
-                    map<string, uint64_t>::iterator iter = sstatus.ipset.begin();
-                    while (iter != sstatus.ipset.end())
-                    {
-
-                        if (mysql_query(&config.con, ("INSERT INTO alive_ip (id, nodeid, userid, ip, datetime, type) VALUES (NULL,'" + to_string(config.node_id) +
-                        "','" + to_string(iter->second) +  "','" + iter->first +  "','" + to_string(std::chrono::duration_cast<std::chrono::seconds>(
-                        std::chrono::system_clock::now().time_since_epoch()).count()) +  "','2')" ).c_str())) {
-
-                            Log::log_with_date_time(mysql_error(&config.con), Log::FATAL);
-                        }
-
-                        iter++;
-                    }
-                    sstatus.ipset.clear();
-
-                    if (mysql_query(&config.con, ("INSERT INTO ss_node_online_log (id, node_id, online_user, log_time, type) VALUES (NULL,'" + to_string(config.node_id) +
-                    "','" + to_string(sstatus.online_user.size()) +  "','"  + to_string(std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count()) +  "','2')" ).c_str())) {
-
-                        Log::log_with_date_time(mysql_error(&config.con), Log::FATAL);
-                    }
-                    sstatus.online_user.clear();
-
-                    if (mysql_query(&config.con, ("UPDATE ss_node SET `node_bandwidth`=`node_bandwidth`+'" + to_string(sstatus.bandwidth) +  "' WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
-                       Log::log_with_date_time(mysql_error(&config.con), Log::ERROR);
-                    }
-                    //Log::log_with_date_time("流量消耗: " + to_string(sstatus.bandwidth), Log::ERROR);
-
-                    sstatus.bandwidth = 0;
-
-	            })
-		         ->setInterval(60000)
-		         ->start();
-            }
             Service service(config, sstatus, test);
             if (test) {
                 Log::log("The config file looks good.", Log::OFF);
