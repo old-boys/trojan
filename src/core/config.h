@@ -37,6 +37,7 @@ public:
     uint16_t node_rate;
     uint16_t node_class;
     uint16_t ins_type;
+    uint16_t update_db;
     std::string local_addr;
     uint16_t local_port;
     std::string remote_addr;

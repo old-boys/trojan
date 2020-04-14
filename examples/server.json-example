@@ -46,5 +46,6 @@
         "cafile": ""
     },
     "node_id": 1,
+    "update_db": 1,
     "ins_type": 2
 }

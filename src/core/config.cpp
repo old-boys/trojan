@@ -55,6 +55,7 @@ void Config::populate(const ptree &tree) {
     }
     node_id = tree.get("node_id", uint16_t());
     ins_type = tree.get("ins_type", uint16_t());
+    update_db = tree.get("update_db", uint16_t());
     local_addr = tree.get("local_addr", string());
     local_port = tree.get("local_port", uint16_t());
     remote_addr = tree.get("remote_addr", string());
