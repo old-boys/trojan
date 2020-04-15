@@ -31,6 +31,9 @@ ServerSession::ServerSession(const Config &config, SStatus &sstatus, boost::asio
     out_socket(io_context),
     udp_resolver(io_context),
     auth(auth),
+    user_id(0),
+    transfer_enable(0),
+    bandwidth_used(0),
     plain_http_response(plain_http_response) {}
 
 tcp::socket& ServerSession::accept_socket() {
@@ -141,10 +144,22 @@ void ServerSession::in_recv(const string &data) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
                 valid = false;
-                if (auth && auth->auth(req.password, user_id, config)) {
+                if (auth && auth->auth(req.password, user_id, transfer_enable, bandwidth_used, config, sstatus)) {
                     valid = true;
+
+                    if (config.update_db) {
+                        sstatus.online_user.insert(user_id);
+                        sstatus.ipset.insert({in_endpoint.address().to_string(), user_id});
+                    }
+
+                    if (sstatus.user_transfer.find(user_id) != sstatus.user_transfer.end()) {
+						sstatus.user_transfer.insert(pair<uint64_t, SStatus::UTransfer>(user_id, {0, 0}));
+                    }
                     auth_password = req.password;
                     Log::log_with_endpoint(in_endpoint, "user " + to_string(user_id) + " authenticated by authenticator (" + req.password.substr(0, 7) + ')', Log::INFO);
+	     	        // Log::log_with_endpoint(in_endpoint, "user " + to_string(user_id) + " status, (" + to_string(transfer_enable) +  ", " 
+                    //   + to_string(bandwidth_used) + ", " + to_string(sstatus.user_transfer[user_id].upload + sstatus.user_transfer[user_id].download) + ')', Log::FATAL);
+
                 }
             } else {
                 Log::log_with_endpoint(in_endpoint, "authenticated as " + password_iterator->second, Log::INFO);
@@ -183,6 +198,7 @@ void ServerSession::in_recv(const string &data) {
             out_write_buf = data;
         }
         sent_len += out_write_buf.length();
+        sstatus.user_transfer[user_id].upload += out_write_buf.length();
         auto self = shared_from_this();
         resolver.async_resolve(query_addr, query_port, [this, self, query_addr, query_port](const boost::system::error_code error, tcp::resolver::results_type results) {
             if (error || results.size() == 0) {
@@ -238,6 +254,7 @@ void ServerSession::in_recv(const string &data) {
         });
     } else if (status == FORWARD) {
         sent_len += data.length();
+        sstatus.user_transfer[user_id].upload += data.length();
         out_async_write(data);
     } else if (status == UDP_FORWARD) {
         udp_data_buf += data;
@@ -256,6 +273,7 @@ void ServerSession::in_sent() {
 void ServerSession::out_recv(const string &data) {
     if (status == FORWARD) {
         recv_len += data.length();
+        sstatus.user_transfer[user_id].download += data.length();
         in_async_write(data);
     }
 }
@@ -271,6 +289,7 @@ void ServerSession::udp_recv(const string &data, const udp::endpoint &endpoint) 
         size_t length = data.length();
         Log::log_with_endpoint(in_endpoint, "received a UDP packet of length " + to_string(length) + " bytes from " + endpoint.address().to_string() + ':' + to_string(endpoint.port()));
         recv_len += length;
+        sstatus.user_transfer[user_id].download += length;
         in_async_write(UDPPacket::generate(endpoint, data));
     }
 }
@@ -322,6 +341,7 @@ void ServerSession::udp_sent() {
                 udp_async_read();
             }
             sent_len += packet.length;
+            sstatus.user_transfer[user_id].upload += packet.length;
             udp_async_write(packet.payload, *iterator);
         });
     }
@@ -333,13 +353,11 @@ void ServerSession::destroy() {
     }
     status = DESTROY;
     Log::log_with_endpoint(in_endpoint, "disconnected, " + to_string(recv_len) + " bytes received, " + to_string(sent_len) + " bytes sent, lasted for " + to_string(time(NULL) - start_time) + " seconds", Log::INFO);
+    /*
     if (auth && !auth_password.empty()) {
-        if (config.update_db) {
-            sstatus.online_user.insert(user_id);
-            sstatus.ipset.insert({in_endpoint.address().to_string(), user_id});
-        }
-        auth->record(auth_password, sstatus, recv_len, sent_len, config);
+        //auth->record(auth_password, sstatus, recv_len, sent_len, config);
     }
+    */
     boost::system::error_code ec;
     resolver.cancel();
     udp_resolver.cancel();

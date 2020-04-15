@@ -25,5 +25,6 @@
 void SStatus::init() {
     ipset.clear();
     online_user.clear();
+    user_transfer.clear();
     bandwidth = 0;
 }

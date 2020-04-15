@@ -42,7 +42,7 @@ Authenticator::Authenticator(const Config &config) {
     Log::log_with_date_time("connected to MySQL server", Log::INFO);
 }
 
-bool Authenticator::auth(const string &password, uint64_t &user_id, const Config &config) {
+bool Authenticator::auth(const string &password, uint64_t &user_id, uint64_t &transfer_enable, uint64_t &bandwidth_used, const Config &config, SStatus &sstatus) {
     if (!is_valid_password(password)) {
         return false;
     }
@@ -60,18 +60,23 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, const Config
         mysql_free_result(res);
         return false;
     }
-    int64_t transfer_enable = atoll(row[0]);
-    int64_t used = atoll(row[1]);
-    int64_t user_class = atoll(row[2]);
-    user_id =  atoll(row[3]);
+    transfer_enable = strtoull(row[0], NULL, 10);
+    bandwidth_used = strtoull(row[1], NULL, 10);
+    uint64_t user_class = strtoull(row[2], NULL, 10);
+    user_id =  strtoull(row[3], NULL, 10);
     mysql_free_result(res);
+
+    uint64_t bandwidth_real_used = bandwidth_used;
 
     if (user_class < config.node_class) {
         Log::log_with_date_time(password + " user class smaller than node", Log::WARN);
         return false;
     }
 
-    if (used >= transfer_enable) {
+   if (sstatus.user_transfer.find(user_id) != sstatus.user_transfer.end()) {
+		bandwidth_real_used += (sstatus.user_transfer[user_id].upload + sstatus.user_transfer[user_id].download);
+   }
+   if (bandwidth_real_used >= transfer_enable) {
         Log::log_with_date_time(password + " ran out of bandwidth", Log::WARN);
         return false;
     }
@@ -88,9 +93,11 @@ void Authenticator::record(const string &password, SStatus &sstatus, uint64_t do
 
     sstatus.bandwidth += download * config.node_rate + upload * config.node_rate;
 
+/*
     if (mysql_query(&con, ("UPDATE user SET d = d + " + to_string(download * config.node_rate) + ", u = u + " + to_string(upload * config.node_rate) + " WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
     }
+*/
 }
 
 bool Authenticator::is_valid_password(const string &password) {
@@ -112,7 +119,7 @@ Authenticator::~Authenticator() {
 #else // ENABLE_MYSQL
 
 Authenticator::Authenticator(const Config&) {}
-bool Authenticator::auth(const string&, uint64_t &, const Config&) { return true; }
+bool Authenticator::auth(const string&, uint64_t &, uint64_t &, uint64_t &, const Config&, SStatus&) { return true; }
 void Authenticator::record(const string&, SStatus&, uint64_t, uint64_t, const Config&) {}
 bool Authenticator::is_valid_password(const string&) { return true; }
 Authenticator::~Authenticator() {}

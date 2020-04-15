@@ -313,15 +313,29 @@ void Service::update_server_status(const boost::system::error_code&) {
         sstatus.online_user.clear();
     }
 
-    if (sstatus.bandwidth > 0) {
-        if (mysql_query(&auth->con, ("UPDATE ss_node SET `node_bandwidth`=`node_bandwidth`+'" + to_string(sstatus.bandwidth) +  "' WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
+
+    uint64_t bandwidth_used_period = 0;
+    map<uint64_t, SStatus::UTransfer>::iterator iter1 = sstatus.user_transfer.begin();
+    while (iter1 != sstatus.user_transfer.end())
+    {
+        if (mysql_query(&auth->con, ("UPDATE user SET d = d + " + to_string(iter1->second.download * config.node_rate) + ", u = u + " + to_string(iter1->second.upload * config.node_rate) + " WHERE id = '" + to_string(iter1->first) + '\'').c_str())) {
+            Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
+        } 
+        
+       // Log::log_with_date_time(to_string(iter1->first) + " upload: " + to_string(iter1->second.upload) + " download: " + to_string(iter1->second.download), Log::ERROR);
+        bandwidth_used_period += (iter1->second.upload + iter1->second.download);
+        iter1++;
+    }
+    sstatus.user_transfer.clear();
+
+    if (bandwidth_used_period > 0) {
+         if (mysql_query(&auth->con, ("UPDATE ss_node SET `node_bandwidth`=`node_bandwidth`+'" + to_string(bandwidth_used_period) +  "' WHERE id = '" + to_string(config.node_id) + '\'').c_str())) {
             Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
         }
     }
-    //Log::log_with_date_time("流量消耗: " + to_string(sstatus.bandwidth), Log::ERROR);
-    sstatus.bandwidth = 0;
+    //Log::log_with_date_time("流量消耗: " + to_string(bandwidth_used_period), Log::ERROR);
 
-    mtimer.expires_from_now(boost::asio::chrono::seconds(70));
+    mtimer.expires_from_now(boost::asio::chrono::seconds(60));
     mtimer.async_wait(boost::bind(&Service::update_server_status,  boost::ref(*this), _1));
 
 }
