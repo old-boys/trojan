@@ -143,6 +143,18 @@ void Config::populate(const ptree &tree) {
     node_rate = atoi(row[0]);
     node_class = atoi(row[1]);
     mysql_free_result(res);
+
+    if (mysql_query(&con, ("SELECT id, regex FROM detect_list WHERE type = '" + to_string(1) + '\'').c_str())) {
+        Log::log_with_date_time(mysql_error(&con), Log::ERROR);
+    }
+    res = mysql_store_result(&con);
+    while (row = mysql_fetch_row(res)) {
+
+         detect_rule.insert({atoi(row[0]), string(row[1])});
+
+         Log::log_with_date_time("regex: " + string(row[1]), Log::FATAL);
+    }
+    mysql_free_result(res);
     mysql_close(&con);
 #endif
 

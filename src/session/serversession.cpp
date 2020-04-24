@@ -183,6 +183,16 @@ void ServerSession::in_recv(const string &data) {
             return it == config.ssl.alpn_port_override.end() ? config.remote_port : it->second;
         }());
         if (valid) {
+            map<uint64_t, string>::const_iterator iter = config.detect_rule.begin();
+            while (iter != config.detect_rule.end()) {
+                if (regex_match(req.address.address, regex(iter->second))) {
+                    destroy();
+                    return;
+                }
+
+                iter++;
+            }
+
             out_write_buf = req.payload;
             if (req.command == TrojanRequest::UDP_ASSOCIATE) {
                 Log::log_with_endpoint(in_endpoint, "requested UDP associate to " + req.address.address + ':' + to_string(req.address.port), Log::INFO);
