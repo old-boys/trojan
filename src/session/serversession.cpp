@@ -189,7 +189,7 @@ void ServerSession::in_recv(const string &data) {
             regex_t reg;
             regmatch_t pm[1];
             while (iter != config.detect_rule.end()) {
-                if (regcomp(&reg, iter->second.c_str(), REG_EXTENDED)) {
+                if (!regcomp(&reg, iter->second.c_str(), REG_EXTENDED)) {
                     if (regexec(&reg, req.address.address.c_str(), 0, NULL , 0) != REG_NOMATCH) {
                         regfree(&reg);
                         destroy();
