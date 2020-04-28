@@ -20,6 +20,8 @@
 #include "serversession.h"
 #include "proto/trojanrequest.h"
 #include "proto/udppacket.h"
+#include <regex.h>
+
 using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
@@ -184,10 +186,19 @@ void ServerSession::in_recv(const string &data) {
         }());
         if (valid) {
             map<uint64_t, string>::const_iterator iter = config.detect_rule.begin();
+            regex_t reg;
+            regmatch_t pm[1];
             while (iter != config.detect_rule.end()) {
-                if (regex_match(req.address.address, regex(iter->second))) {
-                    destroy();
-                    return;
+                if (regcomp(&reg, iter->second.c_str(), REG_EXTENDED)) {
+                    if (regexec(&reg, req.address.address.c_str(), 0, NULL , 0) != REG_NOMATCH) {
+                        regfree(&reg);
+                        destroy();
+                        return;
+                    }
+                    regfree(&reg);
+                }
+                else {
+                    Log::log_with_date_time("compile" + iter->second + " faild !!!!", Log::FATAL);
                 }
 
                 iter++;
