@@ -33,9 +33,16 @@ public:
 	    uint64_t upload;
         uint64_t download;
     };
+
+    class Access {
+    public:
+	    uint64_t userid;
+        bool access;
+    };
+
     std::set<uint64_t> online_user;
-    uint64_t bandwidth;
     std::map<std::string, uint64_t> ipset;
+    std::map<std::string, Access> user_access;
     std::map<uint64_t, UTransfer> user_transfer;   
     void init();
 };

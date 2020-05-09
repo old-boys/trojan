@@ -37,8 +37,7 @@ public:
         MYSQL con;
     #endif // ENABLE_MYSQL
     Authenticator(const Config &config);
-    bool auth(const std::string &password, uint64_t &user_id, uint64_t &transfer_enable, uint64_t &bandwidth_used,  const Config &config, SStatus &sstatus);
-    void record(const std::string &password,  SStatus &sstatus, uint64_t download, uint64_t upload, const Config &config);
+    bool auth(const std::string &password, uint64_t &user_id,  const Config &config, SStatus &sstatus);
     ~Authenticator();
 };
 

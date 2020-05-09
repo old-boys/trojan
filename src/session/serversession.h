@@ -39,8 +39,6 @@ private:
     Authenticator *auth;
     std::string auth_password;
     uint64_t user_id;
-    uint64_t transfer_enable;
-    uint64_t bandwidth_used;
     const std::string &plain_http_response;
     void destroy();
     void in_async_read();

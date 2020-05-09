@@ -42,10 +42,17 @@ Authenticator::Authenticator(const Config &config) {
     Log::log_with_date_time("connected to MySQL server", Log::INFO);
 }
 
-bool Authenticator::auth(const string &password, uint64_t &user_id, uint64_t &transfer_enable, uint64_t &bandwidth_used, const Config &config, SStatus &sstatus) {
+bool Authenticator::auth(const string &password, uint64_t &user_id, const Config &config, SStatus &sstatus) {
     if (!is_valid_password(password)) {
         return false;
     }
+
+    if (sstatus.user_access.find(password) != sstatus.user_access.end()) {
+        user_id = sstatus.user_access[password].userid;
+        //Log::log_with_date_time(password + " @ " + to_string(sstatus.user_access[password].userid) + " cache access ok !!!! " + to_string(sstatus.user_access[password].access), Log::FATAL);
+        return sstatus.user_access[password].access;
+    }
+
     if (mysql_query(&con, ("SELECT transfer_enable, d + u, class, id FROM user WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
         return false;
@@ -60,8 +67,8 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, uint64_t &tr
         mysql_free_result(res);
         return false;
     }
-    transfer_enable = strtoull(row[0], NULL, 10);
-    bandwidth_used = strtoull(row[1], NULL, 10);
+    uint64_t transfer_enable = strtoull(row[0], NULL, 10);
+    uint64_t bandwidth_used = strtoull(row[1], NULL, 10);
     uint64_t user_class = strtoull(row[2], NULL, 10);
     user_id =  strtoull(row[3], NULL, 10);
     mysql_free_result(res);
@@ -69,6 +76,7 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, uint64_t &tr
     uint64_t bandwidth_real_used = bandwidth_used;
 
     if (user_class < config.node_class) {
+        sstatus.user_access.insert(pair<string, SStatus::Access>(password, {user_id, false}));
         Log::log_with_date_time(password + " user class smaller than node", Log::WARN);
         return false;
     }
@@ -77,27 +85,17 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, uint64_t &tr
 		bandwidth_real_used += (sstatus.user_transfer[user_id].upload + sstatus.user_transfer[user_id].download);
    }
    if (bandwidth_real_used >= transfer_enable) {
+        sstatus.user_access.insert(pair<string, SStatus::Access>(password, {user_id, false}));
         Log::log_with_date_time(password + " ran out of bandwidth", Log::WARN);
         return false;
     }
 
+    sstatus.user_access.insert(pair<string, SStatus::Access>(password, {user_id, true}));
+
+   // Log::log_with_date_time(password + " @" + to_string(sstatus.user_access[password].userid) + " access ok @@@@@ " + to_string(sstatus.user_access[password].access), Log::FATAL);
     //TODO: add disconnect ip here
 
     return true;
-}
-
-void Authenticator::record(const string &password, SStatus &sstatus, uint64_t download, uint64_t upload, const Config &config) {
-    if (!is_valid_password(password)) {
-        return;
-    } 
-
-    sstatus.bandwidth += download * config.node_rate + upload * config.node_rate;
-
-/*
-    if (mysql_query(&con, ("UPDATE user SET d = d + " + to_string(download * config.node_rate) + ", u = u + " + to_string(upload * config.node_rate) + " WHERE password = '" + password + '\'').c_str())) {
-        Log::log_with_date_time(mysql_error(&con), Log::ERROR);
-    }
-*/
 }
 
 bool Authenticator::is_valid_password(const string &password) {
@@ -120,7 +118,6 @@ Authenticator::~Authenticator() {
 
 Authenticator::Authenticator(const Config&) {}
 bool Authenticator::auth(const string&, uint64_t &, uint64_t &, uint64_t &, const Config&, SStatus&) { return true; }
-void Authenticator::record(const string&, SStatus&, uint64_t, uint64_t, const Config&) {}
 bool Authenticator::is_valid_password(const string&) { return true; }
 Authenticator::~Authenticator() {}
 

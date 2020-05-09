@@ -34,8 +34,6 @@ ServerSession::ServerSession(const Config &config, SStatus &sstatus, boost::asio
     udp_resolver(io_context),
     auth(auth),
     user_id(0),
-    transfer_enable(0),
-    bandwidth_used(0),
     plain_http_response(plain_http_response) {}
 
 tcp::socket& ServerSession::accept_socket() {
@@ -146,7 +144,7 @@ void ServerSession::in_recv(const string &data) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
                 valid = false;
-                if (auth && auth->auth(req.password, user_id, transfer_enable, bandwidth_used, config, sstatus)) {
+                if (auth && auth->auth(req.password, user_id, config, sstatus)) {
                     valid = true;
 
                     if (config.update_db) {

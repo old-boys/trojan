@@ -322,7 +322,7 @@ void Service::update_server_status(const boost::system::error_code&) {
             Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
         } 
         
-       // Log::log_with_date_time(to_string(iter1->first) + " upload: " + to_string(iter1->second.upload) + " download: " + to_string(iter1->second.download), Log::ERROR);
+        //Log::log_with_date_time(to_string(iter1->first) + " upload: " + to_string(iter1->second.upload) + " download: " + to_string(iter1->second.download), Log::ERROR);
         bandwidth_used_period += (iter1->second.upload + iter1->second.download);
         iter1++;
     }
@@ -334,6 +334,9 @@ void Service::update_server_status(const boost::system::error_code&) {
         }
     }
     //Log::log_with_date_time("流量消耗: " + to_string(bandwidth_used_period), Log::ERROR);
+
+
+     sstatus.user_access.clear();
 
     mtimer.expires_from_now(boost::asio::chrono::seconds(60));
     mtimer.async_wait(boost::bind(&Service::update_server_status,  boost::ref(*this), _1));
