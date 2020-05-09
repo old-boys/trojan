@@ -339,7 +339,7 @@ void Service::update_server_status(const boost::system::error_code&) {
      sstatus.user_access.clear();
 
     mtimer.expires_from_now(boost::asio::chrono::seconds(60));
-    mtimer.async_wait(boost::bind(&Service::update_server_status,  boost::ref(*this), _1));
+    mtimer.async_wait(boost::bind(&Service::update_server_status,  boost::ref(*this), std::placeholders::_1));
 
 }
 
