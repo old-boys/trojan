@@ -43,13 +43,13 @@ private:
     std::string plain_http_response;
     boost::asio::ip::udp::socket udp_socket;
     std::list<std::weak_ptr<UDPForwardSession> > udp_sessions;
-    uint8_t udp_read_buf[MAX_LENGTH];
+    uint8_t udp_read_buf[MAX_LENGTH]{};
     boost::asio::ip::udp::endpoint udp_recv_endpoint;
     void async_accept();
     void udp_async_read();
     void update_server_status(const boost::system::error_code&);
 public:
-    Service(Config &config, SStatus &sstatus, bool test = false);
+    explicit Service(Config &config, SStatus &sstatus, bool test = false);
     void run();
     void stop();
     boost::asio::io_context &service();

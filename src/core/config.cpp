@@ -121,7 +121,7 @@ void Config::populate(const ptree &tree) {
                                 mysql.username.c_str(),
                                 mysql.password.c_str(),
                                 mysql.database.c_str(),
-                                mysql.server_port, NULL, 0) == NULL) {
+                                mysql.server_port, nullptr, 0) == nullptr) {
     throw runtime_error(mysql_error(&con));
     }
     bool reconnect = 1;
@@ -133,11 +133,11 @@ void Config::populate(const ptree &tree) {
     }
 
     MYSQL_RES *res = mysql_store_result(&con);
-    if (res == NULL) {
+    if (res == nullptr) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
     }
     MYSQL_ROW row = mysql_fetch_row(res);
-    if (row == NULL) {
+    if (row == nullptr) {
         mysql_free_result(res);
     }
     node_rate = atoi(row[0]);
@@ -148,7 +148,7 @@ void Config::populate(const ptree &tree) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
     }
     res = mysql_store_result(&con);
-    while (row = mysql_fetch_row(res)) {
+    while ((row = mysql_fetch_row(res)) != nullptr) {
 
          detect_rule.insert({atoi(row[0]), string(row[1])});
 
@@ -162,7 +162,7 @@ void Config::populate(const ptree &tree) {
 
 bool Config::sip003() {
     char *JSON = getenv("SS_PLUGIN_OPTIONS");
-    if (JSON == NULL) {
+    if (JSON == nullptr) {
         return false;
     }
     populate(JSON);
@@ -174,7 +174,6 @@ bool Config::sip003() {
         case CLIENT:
         case NAT:
             throw runtime_error("SIP003 with wrong run_type");
-            break;
         case FORWARD:
             remote_addr = getenv("SS_REMOTE_HOST");
             remote_port = atoi(getenv("SS_REMOTE_PORT"));
@@ -190,10 +189,10 @@ string Config::SHA224(const string &message) {
     char mdString[(EVP_MAX_MD_SIZE << 1) + 1];
     unsigned int digest_len;
     EVP_MD_CTX *ctx;
-    if ((ctx = EVP_MD_CTX_new()) == NULL) {
+    if ((ctx = EVP_MD_CTX_new()) == nullptr) {
         throw runtime_error("could not create hash context");
     }
-    if (!EVP_DigestInit_ex(ctx, EVP_sha224(), NULL)) {
+    if (!EVP_DigestInit_ex(ctx, EVP_sha224(), nullptr)) {
         EVP_MD_CTX_free(ctx);
         throw runtime_error("could not initialize hash context");
     }
