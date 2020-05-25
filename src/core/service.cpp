@@ -238,7 +238,7 @@ Service::Service(Config &config, SStatus &sstatus, bool test) :
     if (!config.ssl.cipher_tls13.empty()) {
         SSL_CTX_set_cipher_list(native_context, config.ssl.cipher.c_str());
     }
-    if (config.ssl.cipher_tls13 != "") {
+    if (!config.ssl.cipher_tls13.empty()) {
 #ifdef ENABLE_TLS13_CIPHERSUITES
         SSL_CTX_set_ciphersuites(native_context, config.ssl.cipher_tls13.c_str());
 #else  // ENABLE_TLS13_CIPHERSUITES
@@ -318,7 +318,8 @@ void Service::update_server_status(const boost::system::error_code&) {
     map<uint64_t, SStatus::UTransfer>::iterator iter1 = sstatus.user_transfer.begin();
     while (iter1 != sstatus.user_transfer.end())
     {
-        if (mysql_query(&auth->con, ("UPDATE user SET d = d + " + to_string(iter1->second.download * config.node_rate) + ", u = u + " + to_string(iter1->second.upload * config.node_rate) + " WHERE id = '" + to_string(iter1->first) + '\'').c_str())) {
+        if (mysql_query(&auth->con, ("UPDATE user SET d = d + " + to_string(iter1->second.download * config.node_rate) + ", u = u + " + to_string(iter1->second.upload * config.node_rate) + ", t = " + to_string(std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count()) + " WHERE id = '" + to_string(iter1->first) + '\'').c_str())) {
             Log::log_with_date_time(mysql_error(&auth->con), Log::ERROR);
         } 
         
