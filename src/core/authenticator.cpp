@@ -53,7 +53,7 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, const Config
         return sstatus.user_access[password].access;
     }
 
-    if (mysql_query(&con, ("SELECT transfer_enable, d + u, class, id FROM user WHERE password = '" + password + '\'').c_str())) {
+    if (mysql_query(&con, ("SELECT transfer_enable, d + u, class, id, enable FROM user WHERE password = '" + password + '\'').c_str())) {
         Log::log_with_date_time(mysql_error(&con), Log::ERROR);
         return false;
     }
@@ -71,9 +71,16 @@ bool Authenticator::auth(const string &password, uint64_t &user_id, const Config
     uint64_t bandwidth_used = strtoull(row[1], NULL, 10);
     uint64_t user_class = strtoull(row[2], NULL, 10);
     user_id =  strtoull(row[3], NULL, 10);
+    uint64_t enable = strtoull(row[4], NULL, 10);
     mysql_free_result(res);
 
     uint64_t bandwidth_real_used = bandwidth_used;
+
+    if (enable != 1) {
+        sstatus.user_access.insert(pair<string, SStatus::Access>(password, {user_id, false}));
+        Log::log_with_date_time(password + " user has been suspended", Log::WARN);
+        return false;
+    }
 
     if (user_class < config.node_class) {
         sstatus.user_access.insert(pair<string, SStatus::Access>(password, {user_id, false}));
